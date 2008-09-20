@@ -32,7 +32,7 @@
 
 
 void i2c_init();
-byte i2c_write(byte address, byte data[], byte num_bytes, bool sccb_flag);
-byte i2c_read(byte address, byte data[], byte num_bytes, bool sccb_flag);
+byte i2c_write(byte address, byte data[], ubyte num_bytes, bool sccb_flag);
+byte i2c_read(byte address, byte data[], ubyte num_bytes, bool sccb_flag);
 
 #endif /*I2C_H_*/

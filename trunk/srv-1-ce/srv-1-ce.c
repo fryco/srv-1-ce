@@ -44,9 +44,10 @@ int main(void)
 	init();
 
 	mytimer = timer_get_new();
-
+	
 	while(1)
 	{
+		
 		if(!timer_get(mytimer))
 		{
 			timer_set(mytimer, 500);
@@ -55,6 +56,7 @@ int main(void)
 
 		if(uart_getchar(&data))
 		{
+			uart_putchar(&data);
 			switch(data)
 			{
 			case 'q':

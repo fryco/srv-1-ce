@@ -18,9 +18,14 @@
  */
 
 #include "uart.h"
+#include "led.h"
 
 byte buffer_empty;
 int temp;
+
+#ifdef HARDWARE_FLOW_CONTROL
+bool cts_asserted;
+#endif
 
 byte buff_receive_push(byte *data)
 {
@@ -151,8 +156,14 @@ void uart_init()
 
 	// Enable edge-senstive interrupt on PH0 (for flow control from Matchport)
 	*pPORTHIO_INEN |= PH0;
+	
+	// Read the current level of the pin, as it may already be asserted
+	cts_asserted = (*pPORTHIO & PH0) ? 0 : 1;
+	
+	*pPORTHIO_EDGE |= PH0;
 	*pPORTHIO_BOTH |= PH0;
-	*pPORTHIO_MASKA_SET |= PH0;
+	*pPORTHIO_MASKA |= PH0;
+	*pSIC_IAR2 &= ~(0xF << 4);
 	*pSIC_IAR2 |= P17_IVG(10);
 #endif
 
@@ -182,6 +193,7 @@ void uart_init()
 
 #ifdef HARDWARE_FLOW_CONTROL
 	*pSIC_IMASK |= (IRQ_DMA1);
+	RTS_ASSERT;
 #endif
 }
 
@@ -190,12 +202,10 @@ byte uart_putchar(byte *data)
 	while(!buff_transmit_push(data)); // Wait until the buffer has free space
 
 	// See if no transmit is in progress, if not, start one off
-	disable_interrupts(temp);
 	if(!(*pUART0_IER & ETBEI))
 	{
 		*pUART0_IER |= ETBEI;
 	}
-	enable_interrupts(temp);
 
 	return 1;
 }
@@ -242,8 +252,27 @@ void uart_ISR()
 {	
 	byte identification_register = *pUART0_IIR;
 
+#ifdef HARDWARE_FLOW_CONTROL
 	// Check to see if interrupt was caused by CTS line change
-	//if()
+	if(CTS_TRIGGERED)
+	{
+		CTS_CLEAR_TRIGGER;
+		
+		// This should stay in sync with the pin level
+		cts_asserted ^= 1;
+		
+		if(!cts_asserted)
+		{
+			// Start transmission again.
+			*pUART0_IER |= ETBEI;
+			LED_1_ON;
+		}
+		else
+		{
+			LED_1_OFF;
+		}
+	}
+#endif
 
 	// Check to see if interrupt was caused by uart error
 	if(identification_register == 0x6)
@@ -265,7 +294,12 @@ void uart_ISR()
 	if(identification_register == 0x2)
 	{
 		byte c;
+		
+#ifdef HARDWARE_FLOW_CONTROL
+		if(buff_transmit_pull(&c) && cts_asserted)
+#else
 		if(buff_transmit_pull(&c))
+#endif
 		{
 			*pUART0_THR = c;
 		}
