@@ -28,9 +28,9 @@ void i2c_init()
 	*pTWI_CLKDIV = CLKHI(I2C_CLK_HIGH) | CLKLOW(I2C_CLK_LOW);
 }
 
-byte i2c_write(byte address, byte data[], byte num_bytes, bool sccb_mode)
+byte i2c_write(byte address, byte data[], ubyte num_bytes, bool sccb_mode)
 {
-	int curr_byte = 0;
+	ubyte curr_byte = 0;
 	
 	// Clear any previous errors and interrupts
 	*pTWI_INT_STAT |= MCOMP | XMTSERV | MERR;
@@ -80,9 +80,9 @@ byte i2c_write(byte address, byte data[], byte num_bytes, bool sccb_mode)
 	return 1;
 }
 
-byte i2c_read(byte address, byte data[], byte num_bytes, bool sccb_mode)
+byte i2c_read(byte address, byte data[], ubyte num_bytes, bool sccb_mode)
 {
-	int curr_byte = 0;
+	ubyte curr_byte = 0;
 	
 	// Clear any previous errors and interrupts
 	*pTWI_INT_STAT |= MCOMP | RCVSERV | MERR;
