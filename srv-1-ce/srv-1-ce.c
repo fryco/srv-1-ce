@@ -26,7 +26,7 @@
 void init(void)
 {
 	pll_init();
-	//sdram_init();
+	sdram_init();
 	led_init();
 	timer_init();
 	uart_init();
@@ -40,13 +40,8 @@ int main(void)
 {
 	timer *mytimer;
 	byte data;
-	ubyte temp;
-	ubyte *tempptr;
 
 	init();
-	
-	tempptr = malloc(1024*1024);
-	tempptr[1023] = 7;
 
 	mytimer = timer_get_new();
 
@@ -85,9 +80,6 @@ int main(void)
 			case 'z':
 				LASER_LEFT_TOGGLE;
 				LASER_RIGHT_TOGGLE;
-				break;
-			case 'p':
-				printf("Hello World: %d\xd\xa",tempptr[1023]);
 				break;
 			}
 		}

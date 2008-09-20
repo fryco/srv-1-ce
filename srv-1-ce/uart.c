@@ -145,15 +145,14 @@ void uart_init()
 	*pPORTF_FER |= (PF0 | PF1);
 
 #ifdef HARDWARE_FLOW_CONTROL
-	// Enable flow control out pin (to Matchport
+	// Enable flow control out pin (to Matchport)
 	*pPORTHIO_DIR |= PH6;
 	RTS_DEASSERT; // Stop any data being received until UART initialised.
 
 	// Enable edge-senstive interrupt on PH0 (for flow control from Matchport)
 	*pPORTHIO_INEN |= PH0;
-	*pPORTHIO_POLAR |= PH0;
+	*pPORTHIO_BOTH |= PH0;
 	*pPORTHIO_MASKA_SET |= PH0;
-	*pSIC_IAR2 &= ~<(0xF0);	// FIXME: A macro should exist for this
 	*pSIC_IAR2 |= P17_IVG(10);
 #endif
 
@@ -182,7 +181,7 @@ void uart_init()
 	*pSIC_IMASK |= (IRQ_DMA8 | IRQ_DMA9);
 
 #ifdef HARDWARE_FLOW_CONTROL
-	*pSIC_IMASK |= IRQ_DMA1;
+	*pSIC_IMASK |= (IRQ_DMA1);
 #endif
 }
 

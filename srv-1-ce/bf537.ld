@@ -208,7 +208,7 @@ SECTIONS
   } >MEM_L1_DATA_A
   . = ALIGN(32 / 8);
   . = ALIGN(32 / 8);
-  __end = ORIGIN(MEM_SDRAM); PROVIDE (_end = .);
+  __end = .; PROVIDE (_end = .);
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }
