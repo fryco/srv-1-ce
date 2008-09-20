@@ -18,7 +18,6 @@
  */
 
 #include "uart.h"
-#include "led.h"
 
 byte buffer_empty;
 int temp;
@@ -265,11 +264,6 @@ void uart_ISR()
 		{
 			// Start transmission again.
 			*pUART0_IER |= ETBEI;
-			LED_1_ON;
-		}
-		else
-		{
-			LED_1_OFF;
 		}
 	}
 #endif
