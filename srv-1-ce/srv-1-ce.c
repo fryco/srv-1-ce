@@ -18,10 +18,6 @@
  */
 
 #include "srv-1-ce.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
 
 void init(void)
 {
@@ -40,6 +36,8 @@ int main(void)
 {
 	timer *mytimer;
 	byte data;
+	ubyte *data2;
+	int i;
 
 	init();
 
@@ -82,6 +80,18 @@ int main(void)
 			case 'z':
 				LASER_LEFT_TOGGLE;
 				LASER_RIGHT_TOGGLE;
+				break;
+			case '1':
+				camera_start();
+				printf("Camera started\xd\xa");
+				break;
+			case '2':
+				camera_stop();
+				printf("Camera stopped\xd\xa");
+				break;
+			case '3':
+				for(i = 0; i < 1000; i++)
+					printf("%d\xd\xa",ping.buff[i]);
 				break;
 			}
 		}

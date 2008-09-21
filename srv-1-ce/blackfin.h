@@ -30,6 +30,10 @@ typedef struct {
 	void *next;
 	ubyte *buff;
 	short config;
+	short xcount;
+	short xmodify;
+	short ycount;
+	short ymodify;
 } dma_desc_list;
 
 #define MASTER_CLOCK	22118000
