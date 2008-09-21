@@ -20,6 +20,9 @@
 #ifndef BLINK_H_
 #define BLINK_H_
 
+#include <stdio.h>
+#include <errno.h>
+
 #include "blackfin.h"
 #include "pll.h"
 #include "sdram.h"

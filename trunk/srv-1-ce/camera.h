@@ -20,17 +20,28 @@
 #ifndef CAMERA_H_
 #define CAMERA_H_
 
+#include <stdio.h>
+#include <malloc.h>
+
 #include "blackfin.h"
 #include "i2c.h"
+#include "uart.h"
+
+#define OMNIVISION_CAMERA_RESET_WORKAROUND
+
+#define CAMERA_I2C_ADDRESS	0x30
+#define CAMERA_PRODUCT_ID	0x9657
 
 #define QQVGA_WIDTH		160
-#define	QQVGA_HEIGHT	120
+#define	QQVGA_HEIGHT	128
 #define QVGA_WIDTH		320
-#define	QVGA_HEIGHT		240
+#define	QVGA_HEIGHT		256
 #define VGA_WIDTH		640
-#define	VGA_HEIGHT		480
+#define	VGA_HEIGHT		512
 #define SXGA_WIDTH		1280
 #define	SXGA_HEIGHT		1024
+
+dma_desc_list ping, pong;
 
 typedef enum {
 	QQVGA,
@@ -38,6 +49,11 @@ typedef enum {
 	VGA,
 	SXGA
 } Resolution;
+
+typedef enum {
+	YUYV = 2,
+	RGB = 3
+} PixelType;
 
 static ubyte ov9655_setup[] = {
 0x12, 0x80,
