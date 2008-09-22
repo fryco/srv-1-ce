@@ -56,7 +56,7 @@ typedef enum {
 	OV9655 = 0x9657
 } CameraProductID;
 
-dma_desc_list image_buffer[NUMBER_OF_IMAGE_BUFFERS];
+dma_desc_list image_buffer_descriptor[NUMBER_OF_IMAGE_BUFFERS];
 bool camera_initialised;
 bool camera_running;
 CameraProductID product_id;
@@ -66,5 +66,6 @@ int camera_set_attributes(Resolution res, PixelFormat pxlfmt);
 int camera_start();
 int camera_stop();
 bool camera_connected();
+void camera_ISR()	__attribute__((interrupt_handler));
 
 #endif /*CAMERA_H_*/
