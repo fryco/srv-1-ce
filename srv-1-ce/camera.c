@@ -18,6 +18,7 @@
  */
 
 #include "camera.h"
+#include "led.h"
 
 void camera_init()
 {
@@ -46,14 +47,14 @@ void camera_init()
 		return;
 	}
 
-	// Setup camera registers
-	for(i = 0; i < (sizeof(ov9655_setup) / 2); i++)
-		i2c_write(CAMERA_I2C_ADDRESS, &(ov9655_setup[i * 2]), 2, 1);
-
-#ifdef OMNIVISION_CAMERA_RESET_WORKAROUND
-	for(i = 0; i < (sizeof(ov9655_setup) / 2); i++)
-		i2c_write(CAMERA_I2C_ADDRESS, &(ov9655_setup[i * 2]), 2, 1);
-#endif
+//	// Setup camera registers
+//	for(i = 0; i < (sizeof(ov9655_setup) / 2); i++)
+//		i2c_write(CAMERA_I2C_ADDRESS, &(ov9655_setup[i * 2]), 2, 1);
+//
+//#ifdef OMNIVISION_CAMERA_RESET_WORKAROUND
+//	for(i = 0; i < (sizeof(ov9655_setup) / 2); i++)
+//		i2c_write(CAMERA_I2C_ADDRESS, &(ov9655_setup[i * 2]), 2, 1);
+//#endif
 
 	camera_initialised = 1;
 	
@@ -64,18 +65,25 @@ void camera_init()
 	// Setup the PPI registers
 	*pPPI_CONTROL = PACK_EN | (2 << 4) | XFR_TYPE;
 
-	// Configure the DMA descriptors
+	// Configure the DMA descriptors (with interrupts)
 	for(i = 0; i < NUMBER_OF_IMAGE_BUFFERS; i++)
 	{
-		image_buffer[i].config = (FLOW_LARGE | NDSIZE_9 | DMA2D | WDSIZE_16 | WNR | DMAEN);
-		image_buffer[i].next = &(image_buffer[i + 1]);
+		image_buffer_descriptor[i].config = (FLOW_LARGE | NDSIZE_9 | DI_EN | DMA2D | WDSIZE_16 | WNR | DMAEN);
+		image_buffer_descriptor[i].next = &(image_buffer_descriptor[i + 1]);
 	}
 
 	// Make the descriptor loop
-	image_buffer[NUMBER_OF_IMAGE_BUFFERS - 1].next = &(image_buffer[0]);
+	image_buffer_descriptor[NUMBER_OF_IMAGE_BUFFERS - 1].next = &(image_buffer_descriptor[0]);
 
 	// Configure the intial CONFIG register, without setting the start bit
 	*pDMA0_CONFIG = (FLOW_LARGE | NDSIZE_9);
+	
+	// Enable DMA0 interrupts
+	*pEVT8 = camera_ISR;
+	*pIMASK |= EVT_IVG8;
+	
+	// Unmask DMA0 interrupt
+	*pSIC_IMASK |= IRQ_DMA0;
 
 	// Put the camera in an initial state
 	camera_set_attributes(VGA, YUYV);
@@ -142,25 +150,22 @@ int camera_set_attributes(Resolution res, PixelFormat pxlfmt)
 	// Configure the DMA descriptors
 	for(i = 0; i < NUMBER_OF_IMAGE_BUFFERS; i++)
 	{
-		image_buffer[i].xcount = width;
-		image_buffer[i].ycount = height;
-		image_buffer[i].xmodify = bytes_per_pixel;
-		image_buffer[i].ymodify = bytes_per_pixel;
+		image_buffer_descriptor[i].xcount = width;
+		image_buffer_descriptor[i].ycount = height;
+		image_buffer_descriptor[i].xmodify = bytes_per_pixel;
+		image_buffer_descriptor[i].ymodify = bytes_per_pixel;
 		
 		// Reallocate memory for new image size
-		free(image_buffer[i].buff);
-		image_buffer[i].buff = memalign(16, width * height * bytes_per_pixel);
+		free(image_buffer_descriptor[i].buff);
+		image_buffer_descriptor[i].buff = memalign(16, width * height * bytes_per_pixel);
 		
-		if(!image_buffer[i].buff)
+		if(!image_buffer_descriptor[i].buff)
 			return -1;
 	}
 
-
-
 	// Reset the DMA starting descriptor
-	*pDMA0_CURR_DESC_PTR = &(image_buffer[0]);
-	*pDMA0_NEXT_DESC_PTR = &(image_buffer[NUMBER_OF_IMAGE_BUFFERS > 1 ? 1 : 0]);
-
+	*pDMA0_NEXT_DESC_PTR = &(image_buffer_descriptor[0]);
+	
 	if(camera_running)
 	{
 		if(camera_start() < 0)
@@ -208,4 +213,10 @@ bool camera_connected()
 		return 1;
 
 	return 0;
+}
+
+void camera_ISR()
+{
+	*pDMA0_IRQ_STATUS |= DMA_DONE;
+	LED_1_TOGGLE;
 }

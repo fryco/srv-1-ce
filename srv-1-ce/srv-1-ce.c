@@ -97,7 +97,7 @@ int main(void)
 				break;
 			case '4':
 				for(i = 0; i < QVGA_WIDTH; i++)
-					printf("%d\xd\xa",image_buffer[0].buff[i]);
+					printf("%d\xd\xa",image_buffer_descriptor[0].buff[i]);
 				break;
 			}
 		}
