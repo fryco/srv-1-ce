@@ -23,117 +23,189 @@ void camera_init()
 {
 	ubyte send;
 	ubyte ret;
-	unsigned short product_id;
 	unsigned int i;
 	
+	camera_running = 0;
+
 	// Check whether the camera is attached
-	send = 0x0a;
+	send = 0xa;
 	i2c_write(CAMERA_I2C_ADDRESS, &send, 1, 1);
 	i2c_read(CAMERA_I2C_ADDRESS, &ret, 1, 1);
 	product_id = (ret << 8);
-	send = 0x0b;
+	send = 0xb;
 	i2c_write(CAMERA_I2C_ADDRESS, &send, 1, 1);
 	i2c_read(CAMERA_I2C_ADDRESS, &ret, 1, 1);
 	product_id += ret;
-	
-	if(product_id != CAMERA_PRODUCT_ID)
-		printf("Camera product id mismatch (0x%04X)\xd\xa",product_id);
-	
+
+	switch(product_id)
+	{
+	case OV9655:
+		break;
+	default:
+		camera_initialised = 0;
+		return;
+	}
+
 	// Setup camera registers
 	for(i = 0; i < (sizeof(ov9655_setup) / 2); i++)
 		i2c_write(CAMERA_I2C_ADDRESS, &(ov9655_setup[i * 2]), 2, 1);
-	
+
 #ifdef OMNIVISION_CAMERA_RESET_WORKAROUND
 	for(i = 0; i < (sizeof(ov9655_setup) / 2); i++)
 		i2c_write(CAMERA_I2C_ADDRESS, &(ov9655_setup[i * 2]), 2, 1);
 #endif
+
+	camera_initialised = 1;
 	
 	// Enable PPI pins
 	*pPORTG_FER |= (PG0 | PG1 | PG2 | PG3 | PG4 | PG5 | PG6 | PG7);
 	*pPORTF_FER |= (PF8 | PF9 | PF15);
-	
+
 	// Setup the PPI registers
 	*pPPI_CONTROL = PACK_EN | (2 << 4) | XFR_TYPE;
-	
-	// Configure the DMA descriptors
-	ping.config = (FLOW_LARGE | NDSIZE_5 | DMA2D | WDSIZE_16 | WNR | DMAEN);
-	pong.config = ping.config;
 
-	// Allocate memory for the images
-	ping.buff = memalign(16, (SXGA_WIDTH * SXGA_HEIGHT * RGB));
-	pong.buff = memalign(16, (SXGA_WIDTH * SXGA_HEIGHT * RGB));
-	
+	// Configure the DMA descriptors
+	for(i = 0; i < NUMBER_OF_IMAGE_BUFFERS; i++)
+	{
+		image_buffer[i].config = (FLOW_LARGE | NDSIZE_9 | DMA2D | WDSIZE_16 | WNR | DMAEN);
+		image_buffer[i].next = &(image_buffer[i + 1]);
+	}
+
 	// Make the descriptor loop
-	ping.next = &pong;
-	pong.next = &ping;
-	
-	// Program the descriptor addresses
-	*pDMA0_CURR_DESC_PTR = &ping;
-	*pDMA0_NEXT_DESC_PTR = &pong;
-	
-	// Put the camera in an initial state
-	camera_set_attributes(QVGA);
-	
+	image_buffer[NUMBER_OF_IMAGE_BUFFERS - 1].next = &(image_buffer[0]);
+
 	// Configure the intial CONFIG register, without setting the start bit
-	*pDMA0_CONFIG = (FLOW_LARGE | NDSIZE_5 | DMA2D | WDSIZE_16 | WNR);
+	*pDMA0_CONFIG = (FLOW_LARGE | NDSIZE_9);
+
+	// Put the camera in an initial state
+	camera_set_attributes(VGA, YUYV);
 }
 
-void camera_set_attributes(Resolution res)
+int camera_set_attributes(Resolution res, PixelFormat pxlfmt)
 {
-	unsigned int i;
-	
-	*pDMA0_X_MODIFY = 2;
-	*pDMA0_Y_MODIFY = *pDMA0_X_MODIFY;
-	
+	ubyte bytes_per_pixel;
+	unsigned int i, width, height;
+
+	if(!camera_initialised)
+		return -1;
+
+	if(camera_running)
+		camera_stop();
+
 	switch(res)
 	{
 	case QQVGA:
 		for(i = 0; i < (sizeof(ov9655_qqvga) / 2); i++)
 			i2c_write(CAMERA_I2C_ADDRESS, &(ov9655_qqvga[i * 2]), 2, 1);
-		
-		*pPPI_COUNT = (QQVGA_WIDTH * 2) - 1;
-		*pPPI_FRAME = QQVGA_HEIGHT;
-		*pDMA0_X_COUNT = QQVGA_WIDTH;
-		*pDMA0_Y_COUNT = QQVGA_HEIGHT;
+
+		width = QQVGA_WIDTH;
+		height = QQVGA_HEIGHT;
 		break;
 	case QVGA:
 		for(i = 0; i < (sizeof(ov9655_qvga) / 2); i++)
 			i2c_write(CAMERA_I2C_ADDRESS, &(ov9655_qvga[i * 2]), 2, 1);
-		
-		*pPPI_COUNT = (QVGA_WIDTH * 2) - 1;
-		*pPPI_FRAME = QVGA_HEIGHT;
-		*pDMA0_X_COUNT = QVGA_WIDTH;
-		*pDMA0_Y_COUNT = QVGA_HEIGHT;
+
+		width = QVGA_WIDTH;
+		height = QVGA_HEIGHT;
 		break;
 	case VGA:
 		for(i = 0; i < (sizeof(ov9655_vga) / 2); i++)
 			i2c_write(CAMERA_I2C_ADDRESS, &(ov9655_vga[i * 2]), 2, 1);
-		
-		*pPPI_COUNT = (VGA_WIDTH * 2) - 1;
-		*pPPI_FRAME = VGA_HEIGHT;
-		*pDMA0_X_COUNT = VGA_WIDTH;
-		*pDMA0_Y_COUNT = VGA_HEIGHT;
+
+		width = VGA_WIDTH;
+		height = VGA_HEIGHT;
 		break;
 	case SXGA:
 		for(i = 0; i < (sizeof(ov9655_sxga) / 2); i++)
 			i2c_write(CAMERA_I2C_ADDRESS, &(ov9655_sxga[i * 2]), 2, 1);
-		
-		*pPPI_COUNT = (SXGA_WIDTH * 2) - 1;
-		*pPPI_FRAME = SXGA_HEIGHT;
-		*pDMA0_X_COUNT = SXGA_WIDTH;
-		*pDMA0_Y_COUNT = SXGA_HEIGHT;
+
+		width = SXGA_WIDTH;
+		height = SXGA_HEIGHT;
 		break;
+	default:
+		return -1;
 	}
+
+	switch(pxlfmt)
+	{
+	case YUYV:
+		bytes_per_pixel = 2;
+		break;
+	default:
+		return -1;
+	}
+
+	// Program the PPI
+	*pPPI_COUNT = (width * bytes_per_pixel) - 1;
+	*pPPI_FRAME = height;
+
+	// Configure the DMA descriptors
+	for(i = 0; i < NUMBER_OF_IMAGE_BUFFERS; i++)
+	{
+		image_buffer[i].xcount = width;
+		image_buffer[i].ycount = height;
+		image_buffer[i].xmodify = bytes_per_pixel;
+		image_buffer[i].ymodify = bytes_per_pixel;
+		
+		// Reallocate memory for new image size
+		free(image_buffer[i].buff);
+		image_buffer[i].buff = memalign(16, width * height * bytes_per_pixel);
+		
+		if(!image_buffer[i].buff)
+			return -1;
+	}
+
+
+
+	// Reset the DMA starting descriptor
+	*pDMA0_CURR_DESC_PTR = &(image_buffer[0]);
+	*pDMA0_NEXT_DESC_PTR = &(image_buffer[NUMBER_OF_IMAGE_BUFFERS > 1 ? 1 : 0]);
+
+	if(camera_running)
+	{
+		if(camera_start() < 0)
+			return -1;
+	}
+
+	return 0;
 }
 
-void camera_start()
+int camera_start()
 {
+	if(!camera_initialised)
+		return -1;
+	
+	if(camera_running)
+		return 0;
+	
 	*pDMA0_CONFIG |= DMAEN;
 	*pPPI_CONTROL |= PORT_EN;
+	
+	camera_running = 1;
+
+	return 0;
 }
 
-void camera_stop()
+int camera_stop()
 {
+	if(!camera_initialised)
+		return -1;
+	
+	if(!camera_running)
+		return 0;
+
 	*pPPI_CONTROL &= ~PORT_EN;
 	*pDMA0_CONFIG &= ~DMAEN;
+	
+	camera_running = 0;
+
+	return 0;
+}
+
+bool camera_connected()
+{
+	if(camera_initialised)
+		return 1;
+
+	return 0;
 }
