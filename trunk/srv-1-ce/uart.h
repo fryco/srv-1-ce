@@ -20,11 +20,13 @@
 #ifndef UART_H_
 #define UART_H_
 
-#undef HARDWARE_FLOW_CONTROL
-
 #include "blackfin.h"
 
+#undef HARDWARE_FLOW_CONTROL
+
 #define UART_BAUDRATE	115200
+//#define UART_BAUDRATE	921600
+//#define UART_BAUDRATE	2304000
 #define UART_CLK_DIV	(PERIPHERAL_CLOCK / (16 * UART_BAUDRATE))
 
 #define RX_BUFF_SIZE	1024

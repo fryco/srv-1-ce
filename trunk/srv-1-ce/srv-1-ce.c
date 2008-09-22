@@ -37,7 +37,7 @@ int main(void)
 	timer *mytimer;
 	byte data;
 	ubyte *data2;
-	int i;
+	int i = 0;
 
 	init();
 
@@ -45,7 +45,10 @@ int main(void)
 	
 	while(1)
 	{
-		
+		/* 
+		 * Life LED
+		 * If this stops flashing, somethings probably gone wrong
+		 */
 		if(!timer_get(mytimer))
 		{
 			timer_set(mytimer, 500);
@@ -90,8 +93,11 @@ int main(void)
 				printf("Camera stopped\xd\xa");
 				break;
 			case '3':
-				for(i = 0; i < 1000; i++)
-					printf("%d\xd\xa",ping.buff[i]);
+				camera_set_attributes(SXGA, YUYV);
+				break;
+			case '4':
+				for(i = 0; i < QVGA_WIDTH; i++)
+					printf("%d\xd\xa",image_buffer[0].buff[i]);
 				break;
 			}
 		}
