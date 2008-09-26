@@ -47,7 +47,7 @@ byte *t_ptr;	// Ring buffer read-pointer
 
 void uart_init();
 byte uart_putchar(byte *data);
-byte uart_putchars(byte *data, unsigned short len);
+byte uart_putchars(byte *data, unsigned int len);
 void uart_putstring(byte string[]);
 byte uart_getchar(byte *data);
 void uart_ISR()	__attribute__((interrupt_handler));

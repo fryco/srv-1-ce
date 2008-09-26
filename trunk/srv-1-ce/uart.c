@@ -209,7 +209,7 @@ byte uart_putchar(byte *data)
 	return 1;
 }
 
-byte uart_putchars(byte *data, unsigned short len)
+byte uart_putchars(byte *data, unsigned int len)
 {
 	unsigned short i;
 	byte *ptr = data;

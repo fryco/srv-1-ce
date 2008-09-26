@@ -34,6 +34,7 @@ void init(void)
 
 int main(void)
 {
+	Frame myframe;
 	timer *mytimer;
 	byte data;
 	ubyte *data2;
@@ -53,6 +54,11 @@ int main(void)
 		{
 			timer_set(mytimer, 500);
 			LED_0_TOGGLE;
+		}
+		
+		if(camera_get_new_frame(&myframe) == 1)
+		{
+			camera_return_frame(&myframe);
 		}
 
 		if(uart_getchar(&data))
@@ -93,11 +99,30 @@ int main(void)
 				printf("Camera stopped\xd\xa");
 				break;
 			case '3':
-				camera_set_attributes(SXGA, YUYV);
+//				printf("*pDMA0_CONFIG: %04X\xd\xa",*pDMA0_CONFIG);
+//				printf("*pDMA0_X_COUNT: %04X\xd\xa",*pDMA0_X_COUNT);
+//				printf("*pDMA0_Y_COUNT: %04X\xd\xa",*pDMA0_Y_COUNT);
+//				printf("*pDMA0_X_MODIFY: %04X\xd\xa",*pDMA0_X_MODIFY);
+//				printf("*pDMA0_Y_MODIFY: %04X\xd\xa",*pDMA0_Y_MODIFY);
+//				printf("*pDMA0_START_ADDR: %04X\xd\xa",*pDMA0_START_ADDR);
 				break;
 			case '4':
-				for(i = 0; i < QVGA_WIDTH; i++)
-					printf("%d\xd\xa",image_buffer_descriptor[0].buff[i]);
+				camera_get_new_frame(&myframe);
+				break;
+			case '5':
+				camera_return_frame(&myframe);
+				break;
+			case '6':
+				if(camera_get_new_frame(&myframe) == 1)
+				{
+					for(i = 0; i < 32; i++)
+						printf("%d\xd\xa",myframe.image.data[i]);
+					
+					camera_return_frame(&myframe);
+				}
+				break;
+			case '7':
+				camera_set_attributes(SXGA, YUYV);
 				break;
 			}
 		}
