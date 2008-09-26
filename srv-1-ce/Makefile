@@ -7,7 +7,7 @@ LDR = $(CROSS_COMPILE)ldr
 
 CPU = bf537-0.2
 CFLAGS = -mcpu=$(CPU) 
-CFLAGS += -W -Tbf537.ld -O2
+CFLAGS += -W -Wall -Tbf537.ld -O2
 #CFLAGS += -W -Wall -Tbf537.ld -02
 LDRFLAGS = --bits 16 --dma 8 --bmode para
 

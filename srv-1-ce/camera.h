@@ -27,19 +27,23 @@
 #include "i2c.h"
 #include "camera_ov9655.h"
 
-#define OMNIVISION_CAMERA_RESET_WORKAROUND
-
 #define CAMERA_I2C_ADDRESS		0x30
 #define NUMBER_OF_IMAGE_BUFFERS	4
 
-#define QQVGA_WIDTH		160
-#define	QQVGA_HEIGHT	128
-#define QVGA_WIDTH		320
-#define	QVGA_HEIGHT		256
-#define VGA_WIDTH		640
-#define	VGA_HEIGHT		512
-#define SXGA_WIDTH		1280
-#define	SXGA_HEIGHT		1024
+#define QQVGA_WIDTH				160
+#define	QQVGA_HEIGHT			120
+#define QVGA_WIDTH				320
+#define	QVGA_HEIGHT				240
+#define VGA_WIDTH				640
+#define	VGA_HEIGHT				480
+#define SXGA_WIDTH				1280
+#define	SXGA_HEIGHT				1024
+
+#define YUYV_BYTES_PER_PIXEL	2
+#define RGB565_BYTES_PER_PIXEL	2
+
+#define WAITING_BUFF_SIZE		(NUMBER_OF_IMAGE_BUFFERS + 1)
+#define FILLED_BUFF_SIZE		(NUMBER_OF_IMAGE_BUFFERS + 1)
 
 typedef enum {
 	QQVGA,
@@ -49,23 +53,57 @@ typedef enum {
 } Resolution;
 
 typedef enum {
-	YUYV
+	YUYV,
+	RGB565
 } PixelFormat;
+
+typedef struct {
+	unsigned int	width;
+	unsigned int	height;
+	PixelFormat		format;
+	ubyte			bytes_per_pixel;
+	unsigned char	*data;
+} Image;
+
+typedef struct {
+	byte			id;
+	unsigned int	number;
+	Image			image;
+} Frame;
 
 typedef enum {
 	OV9655 = 0x9657
 } CameraProductID;
 
-dma_desc_list image_buffer_descriptor[NUMBER_OF_IMAGE_BUFFERS];
-bool camera_initialised;
-bool camera_running;
-CameraProductID product_id;
+ubyte			*img_buffer[NUMBER_OF_IMAGE_BUFFERS];
+ubyte			waiting_buff[WAITING_BUFF_SIZE];
+ubyte			filled_buff[FILLED_BUFF_SIZE];
 
-void camera_init();
-int camera_set_attributes(Resolution res, PixelFormat pxlfmt);
-int camera_start();
-int camera_stop();
-bool camera_connected();
-void camera_ISR()	__attribute__((interrupt_handler));
+ubyte			*waiting_tail;
+ubyte			*waiting_ptr;
+ubyte			*filled_tail;
+ubyte			*filled_ptr;
 
+CameraProductID	product_id;
+unsigned int	curr_width, curr_height;
+unsigned int	curr_frame_number;
+ubyte			curr_bytes_per_pixel;
+ubyte			curr_pixel_format;
+byte			curr_buffer;
+bool			camera_initialised;
+bool			camera_running;
+
+void	camera_init();
+int		camera_set_attributes(Resolution res, PixelFormat pxlfmt);
+int		camera_start();
+int		camera_stop();
+bool	camera_connected();
+void	camera_ISR()	__attribute__((interrupt_handler));
+int		camera_get_new_frame(Frame *frame);
+void	camera_return_frame(Frame *frame);
+
+byte	buff_waiting_push(byte *data);
+byte	buff_waiting_pull(byte *data);
+byte	buff_filled_push(byte *data);
+byte	buff_filled_pull(byte *data);
 #endif /*CAMERA_H_*/
