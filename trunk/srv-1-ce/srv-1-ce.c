@@ -39,10 +39,13 @@ int main(void)
 	byte data;
 	ubyte *data2;
 	int i = 0;
+	unsigned int j;
 
 	init();
 
 	mytimer = timer_get_new();
+	
+	camera_start();
 	
 	while(1)
 	{
@@ -58,6 +61,7 @@ int main(void)
 		
 		if(camera_get_new_frame(&myframe) == 1)
 		{
+			//printf("Frame %d\xd\xa",myframe.number);
 			camera_return_frame(&myframe);
 		}
 
@@ -99,12 +103,12 @@ int main(void)
 				printf("Camera stopped\xd\xa");
 				break;
 			case '3':
-//				printf("*pDMA0_CONFIG: %04X\xd\xa",*pDMA0_CONFIG);
-//				printf("*pDMA0_X_COUNT: %04X\xd\xa",*pDMA0_X_COUNT);
-//				printf("*pDMA0_Y_COUNT: %04X\xd\xa",*pDMA0_Y_COUNT);
-//				printf("*pDMA0_X_MODIFY: %04X\xd\xa",*pDMA0_X_MODIFY);
-//				printf("*pDMA0_Y_MODIFY: %04X\xd\xa",*pDMA0_Y_MODIFY);
-//				printf("*pDMA0_START_ADDR: %04X\xd\xa",*pDMA0_START_ADDR);
+				while(camera_get_new_frame(&myframe) != 1);
+				
+				for(j = 0; j < 640 * 480 * 2; j++)
+					uart_putchar(&(myframe.image.data[j]));
+				
+				camera_return_frame(&myframe);
 				break;
 			case '4':
 				camera_get_new_frame(&myframe);
@@ -115,14 +119,19 @@ int main(void)
 			case '6':
 				if(camera_get_new_frame(&myframe) == 1)
 				{
-					for(i = 0; i < 32; i++)
+					for(j = 0; j < 32; j++)
 						printf("%d\xd\xa",myframe.image.data[i]);
 					
 					camera_return_frame(&myframe);
 				}
 				break;
 			case '7':
-				camera_set_attributes(SXGA, YUYV);
+				printf("PPI_STATUS: %X\xd\xa",*pPPI_STATUS >> 8);
+				break;
+			case '8':
+				j = 0;
+				while(1)
+					printf("%d\xd\xa",j++);
 				break;
 			}
 		}
