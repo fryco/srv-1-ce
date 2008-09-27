@@ -334,7 +334,7 @@ void camera_ISR()
 	byte i;
 	
 	*pDMA0_IRQ_STATUS |= DMA_DONE;
-	LED_1_TOGGLE;
+	//LED_1_TOGGLE;
 	
 	// Move to the new buffer
 	if(buff_waiting_pull(&i))

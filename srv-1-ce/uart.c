@@ -18,6 +18,7 @@
  */
 
 #include "uart.h"
+#include "led.h"
 
 byte buffer_empty;
 int temp;
@@ -256,11 +257,12 @@ void uart_ISR()
 	if(CTS_TRIGGERED)
 	{
 		CTS_CLEAR_TRIGGER;
+		LED_1_TOGGLE;
 		
 		// This should stay in sync with the pin level
 		cts_asserted ^= 1;
 		
-		if(!cts_asserted)
+		if(cts_asserted)
 		{
 			// Start transmission again.
 			*pUART0_IER |= ETBEI;
@@ -290,14 +292,21 @@ void uart_ISR()
 		byte c;
 		
 #ifdef HARDWARE_FLOW_CONTROL
-		if(buff_transmit_pull(&c) && cts_asserted)
-#else
-		if(buff_transmit_pull(&c))
-#endif
+		if(cts_asserted)
 		{
-			*pUART0_THR = c;
+#endif
+			if(buff_transmit_pull(&c))
+			{
+				*pUART0_THR = c;
+			}
+			else
+				*pUART0_IER &= ~ETBEI;	// Disable transmit interrupt
+#ifdef HARDWARE_FLOW_CONTROL
 		}
 		else
+		{
 			*pUART0_IER &= ~ETBEI;	// Disable transmit interrupt
+		}
+#endif
 	}
 }
