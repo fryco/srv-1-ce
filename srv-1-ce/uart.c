@@ -22,10 +22,7 @@
 
 byte buffer_empty;
 int temp;
-
-#ifdef HARDWARE_FLOW_CONTROL
-bool cts_asserted;
-#endif
+volatile bool stop;
 
 byte buff_receive_push(byte *data)
 {
@@ -153,18 +150,16 @@ void uart_init()
 	// Enable flow control out pin (to Matchport)
 	*pPORTHIO_DIR |= PH6;
 	RTS_DEASSERT; // Stop any data being received until UART initialised.
-
-	// Enable edge-senstive interrupt on PH0 (for flow control from Matchport)
-	*pPORTHIO_INEN |= PH0;
 	
-	// Read the current level of the pin, as it may already be asserted
-	cts_asserted = (*pPORTHIO & PH0) ? 0 : 1;
-	
+	*pPORTHIO_INEN |= PH0 | PH1;
 	*pPORTHIO_EDGE |= PH0;
 	*pPORTHIO_BOTH |= PH0;
 	*pPORTHIO_MASKA |= PH0;
+	
 	*pSIC_IAR2 &= ~(0xF << 4);
 	*pSIC_IAR2 |= P17_IVG(10);
+	
+	stop = 0;
 #endif
 
 	// Enable the UART
@@ -250,25 +245,34 @@ byte uart_getchar(byte *data)
 
 void uart_ISR()
 {	
-	byte identification_register = *pUART0_IIR;
+	byte identification_register;
 
 #ifdef HARDWARE_FLOW_CONTROL
-	// Check to see if interrupt was caused by CTS line change
+	
 	if(CTS_TRIGGERED)
 	{
 		CTS_CLEAR_TRIGGER;
-		LED_1_TOGGLE;
 		
-		// This should stay in sync with the pin level
-		cts_asserted ^= 1;
+		ssync();
 		
-		if(cts_asserted)
+		stop = (*pPORTHIO & PH1) != 0 ? 1 : 0;
+		
+		if(stop)
 		{
-			// Start transmission again.
+			LED_1_ON;
+		}
+		else
+		{
+			LED_1_OFF;
 			*pUART0_IER |= ETBEI;
 		}
+		
+		return;
 	}
+
 #endif
+	
+	identification_register =  *pUART0_IIR;
 
 	// Check to see if interrupt was caused by uart error
 	if(identification_register == 0x6)
@@ -276,6 +280,8 @@ void uart_ISR()
 		// FIXME, atm just clears interrupt
 		int temp = *pUART0_LSR;
 		temp++;
+		
+		return;
 	}
 
 	// Check to see if interrupt was caused by newly received data
@@ -284,6 +290,8 @@ void uart_ISR()
 		// Read data into ringbuffer
 		byte c = *pUART0_RBR;
 		buff_receive_push(&c);
+		
+		return;
 	}
 
 	// Check to see if interrupt was caused by transmit buffer empty
@@ -291,22 +299,18 @@ void uart_ISR()
 	{
 		byte c;
 		
-#ifdef HARDWARE_FLOW_CONTROL
-		if(cts_asserted)
+		if(!stop)
 		{
-#endif
 			if(buff_transmit_pull(&c))
-			{
 				*pUART0_THR = c;
-			}
 			else
 				*pUART0_IER &= ~ETBEI;	// Disable transmit interrupt
-#ifdef HARDWARE_FLOW_CONTROL
 		}
 		else
 		{
 			*pUART0_IER &= ~ETBEI;	// Disable transmit interrupt
 		}
-#endif
+		
+		return;
 	}
 }
