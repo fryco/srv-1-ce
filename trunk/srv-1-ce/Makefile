@@ -1,14 +1,16 @@
-OBJS=led.o timer.o motor.o laser.o uart.o pll.o sdram.o i2c.o camera.o syscalls.c srv-1-ce.o
-SRCS=$(SRCS:%.o=%.c)
+CSRCS = led.c timer.c motor.c laser.c blob.c uart.c pll.c sdram.c i2c.c jpeg.c camera.c syscalls.c srv-1-ce.c
+ASMSRCS = r8x8dct.S
+OBJS = $(CSRCS:%.c=%.o) $(ASMSRCS:%.S=%.o)
 
 CROSS_COMPILE = bfin-elf-
 CC = $(CROSS_COMPILE)gcc
+LD = $(CROSS_COMPILE)ld
 LDR = $(CROSS_COMPILE)ldr
 
 CPU = bf537-0.2
-CFLAGS = -mcpu=$(CPU) 
-CFLAGS += -W -Wall -Tbf537.ld -O2
-#CFLAGS += -W -Wall -Tbf537.ld -02
+CFLAGS = -mcpu=$(CPU) -W -Wall -O2
+ASMFLAGS = $(CFLAGS)
+LFLAGS = -Tbf537.ld
 LDRFLAGS = --bits 16 --dma 8 --bmode para
 
 all: srv-1-ce.ldr
@@ -16,14 +18,20 @@ all: srv-1-ce.ldr
 %.ldr: %
 	$(LDR) -T $(CPU) -c $(LDRFLAGS) $@ $^
 
-load: srv-1-ce.ldr
-	$(LDR) -l $< /dev/ttyS0
-
 srv-1-ce: $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-	bfin-elf-objdump -d -S srv-1-ce > disassembly
+	$(CC) $(LFLAGS) $(OBJS) -o srv-1-ce
+	
+%.o: %.S
+	$(CC) $(ASMFLAGS) -c $<
 
 clean:
-	rm -f srv-1-ce *.o *.i *.s *.ldr disassembly
+	rm -f srv-1-ce *.o *.i *.ldr disassembly
 
+load:
+	 bfin-elf-ldr -l srv-1-ce.ldr 192.168.0.100:10001
 .PHONY: all clean load
+	
+
+
+
+

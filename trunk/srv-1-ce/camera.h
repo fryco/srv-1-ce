@@ -75,24 +75,6 @@ typedef enum {
 	OV9655 = 0x9657
 } CameraProductID;
 
-ubyte			*img_buffer[NUMBER_OF_IMAGE_BUFFERS];
-ubyte			waiting_buff[WAITING_BUFF_SIZE];
-ubyte			filled_buff[FILLED_BUFF_SIZE];
-
-ubyte			*waiting_tail;
-ubyte			*waiting_ptr;
-ubyte			*filled_tail;
-ubyte			*filled_ptr;
-
-CameraProductID	product_id;
-unsigned int	curr_width, curr_height;
-unsigned int	curr_frame_number;
-ubyte			curr_bytes_per_pixel;
-ubyte			curr_pixel_format;
-byte			curr_buffer;
-bool			camera_initialised;
-bool			camera_running;
-
 void	camera_init();
 int		camera_set_attributes(Resolution res, PixelFormat pxlfmt);
 int		camera_start();

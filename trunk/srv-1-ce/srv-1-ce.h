@@ -33,5 +33,6 @@
 #include "uart.h"
 #include "i2c.h"
 #include "camera.h"
+//#include "blob.h"
 
 #endif /*BLINK_H_*/

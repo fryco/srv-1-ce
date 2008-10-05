@@ -18,6 +18,9 @@
  */
 
 #include "srv-1-ce.h"
+#include "jpeg.h"
+
+
 
 void init(void)
 {
@@ -49,6 +52,9 @@ int main(void)
 	
 	while(1)
 	{
+		ubyte *jpeg_output_buffer_start;
+		ubyte *jpeg_output_buffer_end;
+		
 		/* 
 		 * Life LED
 		 * If this stops flashing, somethings probably gone wrong
@@ -61,13 +67,14 @@ int main(void)
 		
 		if(camera_get_new_frame(&myframe) == 1)
 		{
-			//printf("Frame %d\xd\xa",myframe.number);
+			// Do the blob detection and extraction
+			
 			camera_return_frame(&myframe);
 		}
 
 		if(uart_getchar(&data))
 		{
-			uart_putchar(&data);
+			//uart_putchar(&data);
 			switch(data)
 			{
 			case 'q':
@@ -105,33 +112,33 @@ int main(void)
 			case '3':
 				while(camera_get_new_frame(&myframe) != 1);
 				
-				for(j = 0; j < 640 * 480 * 2; j++)
-					uart_putchar(&(myframe.image.data[j]));
+				jpeg_output_buffer_start = (ubyte*)memalign(16, 640*480*2);
+				
+				if(jpeg_output_buffer_start != NULL)
+				{	
+					// Do the JPEG Compress
+
+					jpeg_output_buffer_end = jpeg_image_encode(myframe.image.data, jpeg_output_buffer_start, 2, JPEG_FOUR_TWO_TWO, myframe.image.width, myframe.image.height);
+
+					ubyte mytmp;
+					
+					mytmp = (jpeg_output_buffer_end - jpeg_output_buffer_start) & 0xFF;
+					uart_putchar((byte*)&mytmp);
+					mytmp = ((jpeg_output_buffer_end - jpeg_output_buffer_start) & 0xFF00) >> 8;
+					uart_putchar((byte*)&mytmp);
+					mytmp = ((jpeg_output_buffer_end - jpeg_output_buffer_start) & 0xFF0000) >> 16;
+					uart_putchar((byte*)&mytmp);
+					
+					for(i = 0; i < (int)(jpeg_output_buffer_end - jpeg_output_buffer_start); i++)
+						uart_putchar((byte*)&(jpeg_output_buffer_start[i]));
+			
+					free(jpeg_output_buffer_start);
+				}
 				
 				camera_return_frame(&myframe);
 				break;
 			case '4':
-				camera_get_new_frame(&myframe);
-				break;
-			case '5':
-				camera_return_frame(&myframe);
-				break;
-			case '6':
-				if(camera_get_new_frame(&myframe) == 1)
-				{
-					for(j = 0; j < 32; j++)
-						printf("%d\xd\xa",myframe.image.data[i]);
-					
-					camera_return_frame(&myframe);
-				}
-				break;
-			case '7':
-				printf("PPI_STATUS: %X\xd\xa",*pPPI_STATUS >> 8);
-				break;
-			case '8':
-				j = 0;
-				while(1)
-					printf("%d\xd\xa",j++);
+				camera_init();
 				break;
 			}
 		}
