@@ -33,8 +33,6 @@ typedef int timer;
 #define timer_get(timer) *timer
 #define timer_set(timer,value) *timer = value;
 
-volatile timer timers[NUM_TIMERS];
-
 void	timer_init();
 timer*	timer_get_new();
 void	timer_release();

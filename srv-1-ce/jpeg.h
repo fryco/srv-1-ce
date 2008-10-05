@@ -17,40 +17,17 @@
  * MA 02111-1307 USA
  */
 
-#ifndef BLACKFIN_H_
-#define BLACKFIN_H_
+#ifndef JPEG_H_
+#define JPEG_H_
 
-#include <cdefBF537.h>
+typedef enum {
+	JPEG_FOUR_ZERO_ZERO,
+	JPEG_FOUR_TWO_ZERO,
+	JPEG_FOUR_TWO_TWO,
+	JPEG_FOUR_FOUR_FOUR,
+	JPEG_RGB
+} JPEGPixelFormat;
 
-typedef char byte;
-typedef unsigned char ubyte;
+unsigned char *jpeg_image_encode(unsigned char *img_data, unsigned char *output_buff, unsigned int quality, JPEGPixelFormat format, unsigned int width, unsigned int height);
 
-#ifndef __cplusplus
-typedef char bool;
-#endif
-
-typedef struct {
-	void *next;
-	ubyte *buff;
-	short config;
-	short xcount;
-	short xmodify;
-	short ycount;
-	short ymodify;
-} dma_desc_list;
-
-#define MASTER_CLOCK	22118000
-#define VCO_MULTIPLIER	27
-#define	CCLK_DIVIDER	1
-#define	SCLK_DIVIDER	5
-
-#define	CORE_CLOCK			(MASTER_CLOCK * VCO_MULTIPLIER / CCLK_DIVIDER)
-#define	PERIPHERAL_CLOCK	(CORE_CLOCK / SCLK_DIVIDER)
-
-#define disable_interrupts(x)	asm volatile("cli %0" : "=r"(x))
-#define enable_interrupts(x)	asm volatile("sti %0" : : "r"(x))
-
-#define csync()	asm volatile("csync;")
-#define ssync()	asm volatile("ssync;")
-
-#endif /*BLACKFIN_H_*/
+#endif /*JPEG_H_*/

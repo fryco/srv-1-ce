@@ -20,20 +20,28 @@
 #include "uart.h"
 #include "led.h"
 
+byte rx_buff[RX_BUFF_SIZE];
+byte tx_buff[TX_BUFF_SIZE];
+
+byte *r_tail;	// Ring buffer tail-pointer
+byte *r_ptr;	// Ring buffer read-pointer
+byte *t_tail;	// Ring buffer tail-pointer
+byte *t_ptr;	// Ring buffer read-pointer
+
 byte buffer_empty;
-int temp;
+int temp3;
 volatile bool stop;
 
 byte buff_receive_push(byte *data)
 {
-	disable_interrupts(temp);
+	disable_interrupts(temp3);
 	
 	// Check for full buffer
 	if (r_tail >= r_ptr)
 	{
 		if ((r_tail - r_ptr) >= RX_BUFF_SIZE - 1)
 		{
-			enable_interrupts(temp);
+			enable_interrupts(temp3);
 			return(0);
 		}
 	}
@@ -41,7 +49,7 @@ byte buff_receive_push(byte *data)
 	{
 		if ((r_tail + RX_BUFF_SIZE - r_ptr) >= RX_BUFF_SIZE - 1)
 		{
-			enable_interrupts(temp);
+			enable_interrupts(temp3);
 			return(0);
 		}
 	}
@@ -53,18 +61,18 @@ byte buff_receive_push(byte *data)
 	if (r_tail >= rx_buff + RX_BUFF_SIZE)
 		r_tail = rx_buff;
 
-	enable_interrupts(temp);
+	enable_interrupts(temp3);
 	return(1);
 }
 
 byte buff_receive_pull(byte *data)
 {
-	disable_interrupts(temp);
+	disable_interrupts(temp3);
 	
 	// Check if there's any data in the buffer
 	if (r_ptr == r_tail)
 	{
-		enable_interrupts(temp);
+		enable_interrupts(temp3);
 		return(0);
 	}
 
@@ -75,20 +83,20 @@ byte buff_receive_pull(byte *data)
 	if (r_ptr >= rx_buff + RX_BUFF_SIZE)
 		r_ptr = rx_buff;
 
-	enable_interrupts(temp);
+	enable_interrupts(temp3);
 	return(1);
 }
 
 byte buff_transmit_push(byte *data)
 {
-	disable_interrupts(temp);
+	disable_interrupts(temp3);
 	
 	// Check for full buffer
 	if (t_tail >= t_ptr)
 	{
 		if ((t_tail - t_ptr) >= TX_BUFF_SIZE - 1)
 		{
-			enable_interrupts(temp);
+			enable_interrupts(temp3);
 			return(0);
 		}
 	}
@@ -96,7 +104,7 @@ byte buff_transmit_push(byte *data)
 	{
 		if ((t_tail + TX_BUFF_SIZE - t_ptr) >= TX_BUFF_SIZE - 1)
 		{
-			enable_interrupts(temp);
+			enable_interrupts(temp3);
 			return(0);
 		}
 	}
@@ -108,18 +116,18 @@ byte buff_transmit_push(byte *data)
 	if (t_tail >= tx_buff + TX_BUFF_SIZE)
 		t_tail = tx_buff;
 	
-	enable_interrupts(temp);
+	enable_interrupts(temp3);
 	return(1);
 }
 
 byte buff_transmit_pull(byte *data)
 {
-	disable_interrupts(temp);
+	disable_interrupts(temp3);
 	
 	// Check if there's any data in the buffer
 	if (t_ptr == t_tail)
 	{
-		enable_interrupts(temp);
+		enable_interrupts(temp3);
 		return(0);
 	}
 
@@ -130,7 +138,7 @@ byte buff_transmit_pull(byte *data)
 	if (t_ptr >= tx_buff + TX_BUFF_SIZE)
 		t_ptr = tx_buff;
 	
-	enable_interrupts(temp);
+	enable_interrupts(temp3);
 	return(1);
 }
 
@@ -178,7 +186,7 @@ void uart_init()
 	*pUART0_IER |= (ERBFI | ELSI);
 
 	// Set uart_ISR as IVG10 handler
-	*pEVT10 = uart_ISR;
+	*pEVT10 = (void*)uart_ISR;
 
 	// Unmask IVG10 interrupt
 	*pIMASK |= EVT_IVG10;
@@ -278,8 +286,8 @@ void uart_ISR()
 	if(identification_register == 0x6)
 	{
 		// FIXME, atm just clears interrupt
-		int temp = *pUART0_LSR;
-		temp++;
+		int temp3 = *pUART0_LSR;
+		temp3++;
 		
 		return;
 	}

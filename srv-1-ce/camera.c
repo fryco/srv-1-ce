@@ -17,8 +17,28 @@
  * MA 02111-1307 USA
  */
 
+#include <stdio.h>
+#include <malloc.h>
 #include "camera.h"
 #include "led.h"
+
+ubyte			*img_buffer[NUMBER_OF_IMAGE_BUFFERS];
+ubyte			waiting_buff[WAITING_BUFF_SIZE];
+ubyte			filled_buff[FILLED_BUFF_SIZE];
+
+ubyte			*waiting_tail;
+ubyte			*waiting_ptr;
+ubyte			*filled_tail;
+ubyte			*filled_ptr;
+
+CameraProductID	product_id;
+unsigned int	curr_width, curr_height;
+unsigned int	curr_frame_number;
+ubyte			curr_bytes_per_pixel;
+ubyte			curr_pixel_format;
+byte			curr_buffer;
+bool			camera_initialised;
+bool			camera_running;
 
 int temp;
 
@@ -136,6 +156,8 @@ void camera_init()
 {
 	ubyte send;
 	ubyte ret;
+	unsigned int i;
+	int temp_id;
 	
 	curr_frame_number = 0;
 	camera_running = 0;
@@ -151,19 +173,23 @@ void camera_init()
 	send = 0xa;
 	i2c_write(CAMERA_I2C_ADDRESS, (byte*)&send, 1, 1);
 	i2c_read(CAMERA_I2C_ADDRESS, (byte*)&ret, 1, 1);
-	product_id = (ret << 8);
+	temp_id = (ret << 8);
 	send = 0xb;
 	i2c_write(CAMERA_I2C_ADDRESS, (byte*)&send, 1, 1);
 	i2c_read(CAMERA_I2C_ADDRESS, (byte*)&ret, 1, 1);
-	product_id += ret;
+	temp_id += ret;
 
-	switch(product_id)
+	switch(temp_id)
 	{
 	case OV9655:
 		break;
 	default:
 		return;
 	}
+	
+	// Program the camera with intial values
+	for(i = 0; i < (sizeof(ov9655_vga) / 2); i++)
+		i2c_write(CAMERA_I2C_ADDRESS, (byte*)&(ov9655_vga[i * 2]), 2, 1);
 	
 	// Enable PPI pins
 	*pPORTG_FER |= (PG0 | PG1 | PG2 | PG3 | PG4 | PG5 | PG6 | PG7);
@@ -175,7 +201,7 @@ void camera_init()
 	camera_initialised = 1;
 	
 	// Enable DMA0 interrupts
-	*pEVT8 = camera_ISR;
+	*pEVT8 = (void*)camera_ISR;
 	*pIMASK |= EVT_IVG8;
 	
 	// Unmask DMA0 interrupt
@@ -253,7 +279,7 @@ int camera_set_attributes(Resolution res, PixelFormat pxlfmt)
 	for(i = 0; i < NUMBER_OF_IMAGE_BUFFERS; i++)
 	{
 		free(img_buffer[i]);
-		img_buffer[i] = memalign(16, curr_width * curr_height * curr_bytes_per_pixel);
+		img_buffer[i] = (ubyte*)memalign(16, curr_width * curr_height * curr_bytes_per_pixel);
 	}
 
 	// Program the PPI
@@ -361,7 +387,7 @@ int camera_get_new_frame(Frame *frame)
 	frame->number = curr_frame_number;
 	frame->image.width = curr_width;
 	frame->image.height = curr_height;
-	frame->image.format = curr_pixel_format;
+	frame->image.format = (PixelFormat)curr_pixel_format;
 	frame->image.bytes_per_pixel = curr_bytes_per_pixel;
 	frame->image.data = img_buffer[(ubyte)i];
 	

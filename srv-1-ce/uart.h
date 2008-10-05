@@ -37,14 +37,6 @@
 #define CTS_TRIGGERED		(*pPORTHIO & PH0)
 #define CTS_CLEAR_TRIGGER	*pPORTHIO_CLEAR = PH0;
 
-byte rx_buff[RX_BUFF_SIZE];
-byte tx_buff[TX_BUFF_SIZE];
-
-byte *r_tail;	// Ring buffer tail-pointer
-byte *r_ptr;	// Ring buffer read-pointer
-byte *t_tail;	// Ring buffer tail-pointer
-byte *t_ptr;	// Ring buffer read-pointer
-
 void uart_init();
 byte uart_putchar(byte *data);
 byte uart_putchars(byte *data, unsigned int len);

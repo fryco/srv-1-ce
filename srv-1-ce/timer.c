@@ -18,9 +18,11 @@
  */
 
 #include "timer.h"
+#include "led.h"
 
 int currTimer;
 int nextAvailable;
+timer timers[NUM_TIMERS];
 
 void timer_init()
 {
@@ -57,7 +59,7 @@ void timer_init()
 	/* 
 	 * Set the interrupt to call timer_ISR()
 	 */
-	*pEVT6 = timer_ISR;
+	*pEVT6 = (void*)timer_ISR;
 	
 	/*
 	 * Unmask the core timer interrupt
@@ -89,11 +91,17 @@ void timer_release()
 }
 
 void timer_ISR()
-{	
+{
+	int t1,t2,t3;
+	
+	asm volatile("%0 = LT1; %1 = LC1; %2 = LB1" : "=r"(t1), "=r"(t2), "=r"(t3));
+	
 	// Decrement all timers
 	for(currTimer = 0; currTimer < NUM_TIMERS; currTimer++)
 	{
-		if(timers[currTimer])
+		if(timers[currTimer] > 0)
 			timers[currTimer]--;
 	}
+	
+	asm volatile("LT1 = %0; LC1 = %1; LB1 = %2" : : "r"(t1), "r"(t2), "r"(t3));
 }
